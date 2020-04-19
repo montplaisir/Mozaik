@@ -1,16 +1,20 @@
 
 import os
+import sys
 from PIL import Image
 cwd = os.getcwd()
 import blur
+import palette8
 
+if len(sys.argv) < 3:
+	print("Syntax: " + sys.argv[0] + " filename [blur|palette8]")
+	exit(0)
+	
 ## File to be read. ##
-# Could be generalized as input on command line.
-filename = "horacio.bmp"
+filename = sys.argv[1]
 
-## Name of the filter. Used for naming output file only. ##
-# Could be generalized as input on command line, and to select filter. ## 
-filtername = "blur"
+## Name of the filter. Used for naming output file and to select filter. ## 
+filtername = sys.argv[2]
 
 outfilename = filename
 outfilename = filename.replace(".","_" + filtername + ".")
@@ -18,9 +22,16 @@ fullfilename = cwd + '\\' + filename
 fulloutfilename = cwd + '\\' + outfilename 
 picref = Image.open(fullfilename)
 
-#pixref = picref.load()
-
-picnew = blur.blur(picref)
+def applyFilter(filtername, picref):
+	if "blur" == filtername:
+		return blur.blur(picref)
+	elif "palette8" == filtername:
+		return palette8.palette8(picref)
+	else:
+		return "Invalid filter name"
+	
+	
+picnew = applyFilter(filtername, picref)
 
 picnew.show()
 picnew.save(fulloutfilename)

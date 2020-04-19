@@ -19,7 +19,6 @@ fulloutfilename = cwd + '\\' + outfilename
 picref = Image.open(fullfilename)
 
 #pixref = picref.load()
-
 picnew = blur.blur(picref)
 
 picnew.show()

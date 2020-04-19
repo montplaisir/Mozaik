@@ -13,8 +13,7 @@ if len(sys.argv) < 3:
 ## File to be read. ##
 filename = sys.argv[1]
 
-## Name of the filter. Used for naming output file only. ##
-# Could be generalized to select filter. ## 
+## Name of the filter. Used for naming output file and to select filter. ## 
 filtername = sys.argv[2]
 
 outfilename = filename

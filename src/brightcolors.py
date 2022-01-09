@@ -12,6 +12,11 @@ class BrightColors:
         self._picnew = picref
         self._stats = {}
         self._pixnew = [[None for j in range(self._height)] for i in range(self._width)]
+
+        # Parameters
+        self._colorThreshold = 30
+        self._numColorMax = 10
+        self._pctCoverage = 95
         
 
     def getWidth(self):
@@ -44,18 +49,20 @@ class BrightColors:
         return mostFrequentColor
 
 
-    def computePixels(self, mostFrequentColor):
-        mfcr = mostFrequentColor[0]
-        mfcg = mostFrequentColor[1]
-        mfcb = mostFrequentColor[2]
-        colorThreshold = 20
+    def isNeighbouringColor(self, color1, color2):
+        return abs(color1[0]-color2[0]) <= self._colorThreshold and abs(color1[1]-color2[1]) <= self._colorThreshold and abs(color1[2]-color2[2]) <= self._colorThreshold
 
+    def computePixels(self, mostFrequentColor):
+        numPixelColored = 0
         for i in range(self._width):
             for j in range(self._height):
-                (r,g,b) = self._pixref[i,j]
-                if abs(r-mfcr) <= colorThreshold and abs(g-mfcg) <= colorThreshold and abs(b-mfcb) <= colorThreshold:
+                color = self._pixref[i,j]
+                if self.isNeighbouringColor(mostFrequentColor, color):
                     if self._pixnew[i][j] is None:
                         self._pixnew[i][j] = mostFrequentColor
+                        numPixelColored += 1
+
+        return numPixelColored
 
 
     def paintPixels(self):
@@ -68,40 +75,33 @@ class BrightColors:
                 pixnewij = (r, g, b)
                 self._picnew.putpixel((i,j),pixnewij)
 
+
+    def clearStats(self, mostFrequentColor):
+        newStats = {}
+        for color in self._stats.keys():
+            if not self.isNeighbouringColor(color, mostFrequentColor):
+                newStats[color] = self._stats[color]
+        self._stats = newStats
         
     def computePalette(self):
-        self._picnew = self._picref
-        numColored = 0
+        numPixelColored = 0
+        numColors = 0
+        totalPixel = self._width * self._height
+        pctCovered = 0.0
 
         self.computeStats()
-
-        mostFrequentColor = self.getMostFrequentColor()
-
-        self.computePixels(mostFrequentColor)
+        
+        while pctCovered < self._pctCoverage and numColors < self._numColorMax:
+            mostFrequentColor = self.getMostFrequentColor()
+            print(mostFrequentColor)
+            numPixelColored += self.computePixels(mostFrequentColor)
+            self.clearStats(mostFrequentColor)
+            print(numPixelColored)
+            pctCovered = numPixelColored * 100.0 / totalPixel
+            numColors += 1
 
         self.paintPixels()
 
-
-        '''
-        for color in allcolors:
-            if (self._stats[color] > 1):
-                print(color, self._stats[color])
-        '''
-        
-
-        '''
-        for i in range(self._width):
-            for j in range(self._height):
-                (r,g,b) = self._pixref[i,j]
-        
-        for i in range(self._width):
-            for j in range(self._height):
-                (r,g,b) = self._pixref[i,j]
-                (rnew, gnew, bnew) = (r,g,b)
-                pixnewij = (rnew, gnew, bnew)
-                picnew.putpixel((i,j),pixnewij)
-        '''
-                
         return self._picnew
 
 

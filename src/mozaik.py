@@ -5,6 +5,7 @@ from PIL import Image
 cwd = os.getcwd()
 import blur
 import palette8
+import brightcolors
 
 if len(sys.argv) < 3:
 	print("Syntax: " + sys.argv[0] + " filename [blur|palette8]")
@@ -18,15 +19,19 @@ filtername = sys.argv[2]
 
 outfilename = filename
 outfilename = filename.replace(".","_" + filtername + ".")
-fullfilename = cwd + '\\' + filename
-fulloutfilename = cwd + '\\' + outfilename 
-picref = Image.open(fullfilename)
+fullfilename = os.path.join(cwd, filename)
+fulloutfilename = os.path.join(cwd, outfilename)
+picref = Image.open(fullfilename);
+
+
 
 def applyFilter(filtername, picref):
 	if "blur" == filtername:
 		return blur.blur(picref)
 	elif "palette8" == filtername:
 		return palette8.palette8(picref)
+	elif "brightcolors" == filtername:
+		return brightcolors.apply(picref)
 	else:
 		return "Invalid filter name"
 	

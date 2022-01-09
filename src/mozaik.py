@@ -18,9 +18,11 @@ filtername = sys.argv[2]
 
 outfilename = filename
 outfilename = filename.replace(".","_" + filtername + ".")
-fullfilename = cwd + '\\' + filename
-fulloutfilename = cwd + '\\' + outfilename 
-picref = Image.open(fullfilename)
+fullfilename = os.path.join(cwd, filename)
+fulloutfilename = os.path.join(cwd, outfilename)
+picref = Image.open(fullfilename);
+
+
 
 def applyFilter(filtername, picref):
 	if "blur" == filtername:

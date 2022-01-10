@@ -6,9 +6,10 @@ cwd = os.getcwd()
 import blur
 import palette8
 import brightcolors
+import saturation
 
 if len(sys.argv) < 3:
-	print("Syntax: " + sys.argv[0] + " filename [blur|palette8]")
+	print("Syntax: " + sys.argv[0] + " filename [blur|palette8|brightcolors|saturation]")
 	exit(0)
 	
 ## File to be read. ##
@@ -32,6 +33,8 @@ def applyFilter(filtername, picref):
 		return palette8.palette8(picref)
 	elif "brightcolors" == filtername:
 		return brightcolors.apply(picref)
+	elif "saturation" == filtername:
+		return saturation.apply(picref)
 	else:
 		return "Invalid filter name"
 	

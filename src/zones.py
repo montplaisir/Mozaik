@@ -3,9 +3,9 @@ import sys
 import hsl
 import random
 import colorutils as ut
+import blur
 
-# Copied from saturation
-# In addition, take into account contour detection
+# New, improved from saturation. Globally similar.
 
 class Zones:
     def __init__(self, picref):
@@ -14,7 +14,6 @@ class Zones:
         self._picref = picref
         self._pixref = picref.load()
         self._picnew = picref
-        self._blur = picref
         self._stats = {}
         self._greyscale = [[0 for j in range(self._height)] for i in range(self._width)]
         self._contour   = [[0 for j in range(self._height)] for i in range(self._width)]
@@ -172,6 +171,11 @@ class Zones:
         return numPixelColored
 
 
+    def applyBlur(self):
+        self._blur = blur.blur(self._picref)
+        self._pixref = self._blur.load()    # Override
+
+        
     def paintPixels(self):
         for i in range(self._width):
             for j in range(self._height):
@@ -227,6 +231,7 @@ class Zones:
         print("    max number of color:",self._numColorMax)
         print("    percentage of coverage before computing remaining pixels:",self._pctCoverage)
 
+        self.applyBlur()
         self.computeStats()
         self.computeContours()
         

@@ -161,9 +161,9 @@ class Zones:
         numPixelColored = 0
         for i in range(self._width):
             for j in range(self._height):
-                color = self._pixref[i,j]
-                if ut.isNeighbouringColor(mostFrequentColor, color, self._colorThreshold):
-                    if self._pixnew[i][j] is None:
+                if self._pixnew[i][j] is None:
+                    color = self._pixref[i,j]
+                    if ut.isNeighbouringColor(mostFrequentColor, color, self._colorThreshold):
                         self._pixnew[i][j] = mostFrequentColorSat
                         numPixelColored += 1
 

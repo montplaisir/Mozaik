@@ -45,15 +45,13 @@ def applyBlur(picref):
 
 def applyFilter(filtername, picref):
     # preprocessing
-    if not "blur" == filtername:
-        if os.path.isfile(fullblurfilename):
-            picref = Image.open(fullblurfilename)
-        else:
-            picref = applyBlur(picref)
-
+    if os.path.isfile(fullblurfilename):
+        picref = Image.open(fullblurfilename)
+    else:
+        picref = applyBlur(picref)
 
     if "blur" == filtername:
-        return blur.blur(picref)
+        return picref
     elif "palette8" == filtername:
         return palette8.palette8(picref)
     elif "brightcolors" == filtername:
@@ -63,10 +61,12 @@ def applyFilter(filtername, picref):
     elif "zones" == filtername:
         return zones.apply(picref)
     else:
-        return "Invalid filter name"
+        print("Invalid filter name:",filtername)
+        return None
     
     
 picnew = applyFilter(filtername, picref)
 
-picnew.show()
-picnew.save(fulloutfilename)
+if picnew:
+    picnew.show()
+    picnew.save(fulloutfilename)

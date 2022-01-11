@@ -2,6 +2,7 @@
 import sys
 import hsl
 import random
+import colorutils as ut
 
 # Copied from saturation
 # In addition, take into account contour detection
@@ -96,7 +97,7 @@ class Zones:
         if minrgb < maxrgb:
             midamount = int((2*midrgb-minrgb-maxrgb)*amount / (maxrgb-minrgb))
 
-        if maxrgb - minrgb < 10: #Grey - greyish
+        if maxrgb - minrgb <= 10: #Grey - greyish
             # Choose color arbitrarly, we do not want grey
             # Make pale greys whiter, dark greys blacker; Medium grey get a color chosen arbitrarly.
             if minrgb <= 2*self._colorThreshold:
@@ -151,33 +152,11 @@ class Zones:
             r += midamount
 
         mostFrequentColorSat = (r,g,b)
-        if not self.isNeighbouringColor(mostFrequentColor,mostFrequentColorSat):
+        if not ut.isNeighbouringColor(mostFrequentColor,mostFrequentColorSat, self._colorThreshold):
             print("Error:",mostFrequentColor,"and",mostFrequentColorSat,"are not neighbouring colors")
 
 
-        '''
-        # Test 1
-        # look at all available colors in the neighbourhood and use the most saturated one.
-        currentSaturation = hsl.computeSaturation(mostFrequentColor)
-        for color in allcolors:
-            if self.colorDistance(color, mostFrequentColor) < self._colorThreshold:
-                newSaturation = hsl.computeSaturation(color)
-                if (newSaturation > currentSaturation):
-                    print("using",color,"instead of",mostFrequentColor)
-                    currentSaturation = newSaturation
-                    mostFrequentColor = color
-        '''
-
-
         return (mostFrequentColor,mostFrequentColorSat)
-
-
-    def colorDistance(self, color1, color2):
-        return max(abs(color1[0]-color2[0]), abs(color1[1]-color2[1]), abs(color1[2]-color2[2]))
-
-
-    def isNeighbouringColor(self, color1, color2):
-        return self.colorDistance(color1,color2) <= self._colorThreshold
 
 
     def computePixels(self, mostFrequentColor, mostFrequentColorSat):
@@ -185,7 +164,7 @@ class Zones:
         for i in range(self._width):
             for j in range(self._height):
                 color = self._pixref[i,j]
-                if self.isNeighbouringColor(mostFrequentColor, color):
+                if ut.isNeighbouringColor(mostFrequentColor, color, self._colorThreshold):
                     if self._pixnew[i][j] is None:
                         self._pixnew[i][j] = mostFrequentColorSat
                         numPixelColored += 1
@@ -208,7 +187,7 @@ class Zones:
     def clearStats(self, mostFrequentColor):
         newStats = {}
         for color in self._stats.keys():
-            if not self.isNeighbouringColor(color, mostFrequentColor):
+            if not ut.isNeighbouringColor(color, mostFrequentColor, self._colorThreshold):
                 newStats[color] = self._stats[color]
         self._stats = newStats
 
@@ -229,7 +208,7 @@ class Zones:
         minDist = 1000
         refcolor = self._pixref[i,j]
         for paletteColor in self._palette:
-            dist = self.colorDistance(refcolor, paletteColor)
+            dist = ut.colorDistance(refcolor, paletteColor)
             if dist < minDist:
                 minDist = dist
                 self._pixnew[i][j] = paletteColor

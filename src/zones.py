@@ -230,26 +230,16 @@ class Zones:
         print("    max number of color:",self._numColorMax)
         print("    percentage of coverage before computing remaining pixels:",self._pctCoverage)
 
-        print("smoothing image...")
-        self.applyBlur()
-        # Test extra blur
-        print("smoothing some more...")
-        self.applyBlur()
         print("computing color stats...")
         self.computeStats()
         #self.computeContours()
         
-        pctLastStep = 100
-        numNewPixels = 0
-        minPct =  max(20 / self._numColorMax, 2)
-        while pctCovered < self._pctCoverage and numColors < self._numColorMax and pctLastStep > minPct:
+        while pctCovered < self._pctCoverage and numColors < self._numColorMax:
             (mostFrequentColor,mostFrequentColorSat) = self.getMostFrequentColorSat()
             self._palette.append(mostFrequentColor)
             print("computing pixels with color:",mostFrequentColorSat)
-            numNewPixels = self.computePixels(mostFrequentColor,mostFrequentColorSat)
-            numPixelColored += numNewPixels
+            numPixelColored += self.computePixels(mostFrequentColor,mostFrequentColorSat)
             self.clearStats(mostFrequentColor)
-            pctLastStep = numNewPixels * 100.0 / totalPixel
             pctCovered = numPixelColored * 100.0 / totalPixel
             print(pctCovered,"% computed...")
             numColors += 1

@@ -70,7 +70,6 @@ class Zones:
                 mostFrequentColor = color
                 frequency = self._stats[color]
 
-        # Test 2
         # Saturate the given color within threshold limits, without regards to the available colors
         # This is done by adding the threshold to the max rgb, and substracting it from the min rgb,
         # within limits.
@@ -231,19 +230,31 @@ class Zones:
         print("    max number of color:",self._numColorMax)
         print("    percentage of coverage before computing remaining pixels:",self._pctCoverage)
 
+        print("smoothing image...")
         self.applyBlur()
+        # Test extra blur
+        print("smoothing some more...")
+        self.applyBlur()
+        print("computing color stats...")
         self.computeStats()
-        self.computeContours()
+        #self.computeContours()
         
-        while pctCovered < self._pctCoverage and numColors < self._numColorMax:
+        pctLastStep = 100
+        numNewPixels = 0
+        minPct =  max(20 / self._numColorMax, 2)
+        while pctCovered < self._pctCoverage and numColors < self._numColorMax and pctLastStep > minPct:
             (mostFrequentColor,mostFrequentColorSat) = self.getMostFrequentColorSat()
             self._palette.append(mostFrequentColor)
             print("computing pixels with color:",mostFrequentColorSat)
-            numPixelColored += self.computePixels(mostFrequentColor,mostFrequentColorSat)
+            numNewPixels = self.computePixels(mostFrequentColor,mostFrequentColorSat)
+            numPixelColored += numNewPixels
             self.clearStats(mostFrequentColor)
+            pctLastStep = numNewPixels * 100.0 / totalPixel
             pctCovered = numPixelColored * 100.0 / totalPixel
+            print(pctCovered,"% computed...")
             numColors += 1
 
+        print(numColors,"colors used")
         print("computing remaining pixels...")
         self.computeRemainingPixels()
 

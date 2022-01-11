@@ -1,5 +1,7 @@
 
 import sys
+import hsl
+import random
 
 # Copied from saturation
 # In addition, take into account contour detection
@@ -11,10 +13,12 @@ class Zones:
         self._picref = picref
         self._pixref = picref.load()
         self._picnew = picref
+        self._blur = picref
         self._stats = {}
         self._greyscale = [[0 for j in range(self._height)] for i in range(self._width)]
         self._contour   = [[0 for j in range(self._height)] for i in range(self._width)]
         self._pixnew    = [[None for j in range(self._height)] for i in range(self._width)]
+        self._palette   = []
 
         # Parameters - Undocumented
         self._colorThreshold = 30
@@ -28,41 +32,6 @@ class Zones:
             self._pctCoverage = int(sys.argv[5])
         
         
-
-    def getWidth(self):
-        return self._width
-
-
-    def getHeight(self):
-        return self._height
-        
-
-    def computeSaturation(self, color):
-        maxrgb = max(color[0], color[1], color[2]);
-        minrgb = min(color[0], color[1], color[2]);
-        if minrgb == maxrgb:
-            return 0;
-        return (maxrgb-minrgb) / (1 - abs((maxrgb-minrgb)/255-1))
-
-
-    def computeHue(self, color):
-        (r,g,b) = color
-        minrgb = min(r,g,b)
-        maxrgb = max(r,g,b)
-        if minrgb == maxrgb:
-            return 0
-
-        if (r == minrgb and g == maxrgb) or (g == minrgb and r == maxrgb):
-            midrgb = b
-        elif (r == minrgb and b == maxrgb) or (b == minrgb and r == maxrgb):
-            midrgb = g
-        elif (g == minrgb and b == maxrgb) or (b == minrgb and g == maxrgb):
-            midrgb = r
-        else:
-            printf("Error in computeHue with",color)
-
-        return (midrgb - minrgb) / (maxrgb - minrgb)
-
 
     def computeStats(self):
         self._stats.clear()
@@ -78,9 +47,7 @@ class Zones:
     def computeGreyscale(self):
         for i in range(self._width):
             for j in range(self._height):
-                (r,g,b) = self._pixref[i,j]
-                grey = int((r+g+b)/3)
-                self._greyscale[i][j] = grey
+                self._greyscale[i][j] = hsl.computeGreyscale(self._pixref[i,j])
 
 
     def computeContours(self):
@@ -93,7 +60,6 @@ class Zones:
                     c3 = 0 -self._greyscale[i-1][j-1] -2*self._greyscale[i][j-1] -self._greyscale[i+1][j-1];
                     c4 =    self._greyscale[i-1][j+1] +2*self._greyscale[i][j+1] +self._greyscale[i+1][j+1];
                     self._contour[i][j] = abs((c1 + c2 + c3 + c4) / 16)
-
 
 
     def getMostFrequentColorSat(self):
@@ -127,24 +93,38 @@ class Zones:
             amount = 255-maxrgb
         if minrgb < amount:
             amount = minrgb
-        if minrgb == maxrgb: #greyscale, saturation = 0
-            amount = 0
-            midamount = 0
-        else:
+        if minrgb < maxrgb:
             midamount = int((2*midrgb-minrgb-maxrgb)*amount / (maxrgb-minrgb))
 
-        if minrgb == maxrgb:
-            # Make pale greys whiter, dark greys blacker
-            if minrgb <= 127:
+        if maxrgb - minrgb < 10: #Grey - greyish
+            # Choose color arbitrarly, we do not want grey
+            # Make pale greys whiter, dark greys blacker; Medium grey get a color chosen arbitrarly.
+            if minrgb <= 2*self._colorThreshold:
                 amount = min(int(minrgb/2),self._colorThreshold)
                 r -= amount
                 g -= amount
                 b -= amount
-            else:
-                amount = min(int((255-minrgb)/2),self._colorThreshold)
+            elif maxrgb + 2*self._colorThreshold >= 255:
+                amount = min(int((255-maxrgb)/2),self._colorThreshold)
                 r += amount
                 g += amount
                 b += amount
+            else:
+                amount = self._colorThreshold
+                halfamount = int(amount/2)  #ensures to keep same luminosity
+                randrgb = random.randrange(3)
+                if randrgb == 0:
+                    r += amount
+                    g -= halfamount
+                    b -= halfamount
+                elif randrgb == 1:
+                    r -= halfamount
+                    g += amount
+                    b -= halfamount
+                elif randrgb == 2:
+                    r -= halfamount
+                    g -= halfamount
+                    b += amount
         elif r == minrgb and g == maxrgb:
             r -= amount
             g += amount
@@ -178,10 +158,10 @@ class Zones:
         '''
         # Test 1
         # look at all available colors in the neighbourhood and use the most saturated one.
-        currentSaturation = self.computeSaturation(mostFrequentColor)
+        currentSaturation = hsl.computeSaturation(mostFrequentColor)
         for color in allcolors:
             if self.colorDistance(color, mostFrequentColor) < self._colorThreshold:
-                newSaturation = self.computeSaturation(color)
+                newSaturation = hsl.computeSaturation(color)
                 if (newSaturation > currentSaturation):
                     print("using",color,"instead of",mostFrequentColor)
                     currentSaturation = newSaturation
@@ -233,80 +213,30 @@ class Zones:
         self._stats = newStats
 
 
-    def computeRemainingPixels(self, checkIsSet):
+    def computeRemainingPixels(self):
         numPixelColor = 0
         for i in range(self._width):
             for j in range(self._height):
-                numPixelColor += self.computePixel(checkIsSet, i, j)
-        '''
-        # This is to avoid bleeding...
-        for i in reversed(range(self._width)):
-            for j in range(self._height):
-                numPixelColor += self.computePixel(checkIsSet, i, j)
-        for i in range(self._width):
-            for j in reversed(range(self._height)):
-                numPixelColor += self.computePixel(checkIsSet, i, j)
-        for i in reversed(range(self._width)):
-            for j in reversed(range(self._height)):
-                numPixelColor += self.computePixel(checkIsSet, i, j)
-        '''
+                numPixelColor += self.computePixel(i, j)
 
         return numPixelColor
 
 
-    def computePixel(self, checkIsSet, i, j):
+    def computePixel(self, i, j):
         if self._pixnew[i][j]:
             return 0
 
-        numPixelColor = 0
         minDist = 1000
-
-        if self._contour[i][j] < 10:
-            doCheck = True
-        else:
-            doCheck = checkIsSet
-
         refcolor = self._pixref[i,j]
-        if i > 0:
-            ii = i-1
-            jj = j
-            if not doCheck or self._pixnew[ii][jj]:
-                dist = self.colorDistance(self._pixref[ii,jj], refcolor)
-                if dist < minDist:
-                    minDist = dist
-                    self._pixnew[i][j] = self._pixnew[ii][jj]
-        if j > 0:
-            ii = i
-            jj = j-1
-            if not doCheck or self._pixnew[ii][jj]:
-                dist = self.colorDistance(self._pixref[ii,jj], refcolor)
-                if dist < minDist:
-                    minDist = dist
-                    self._pixnew[i][j] = self._pixnew[ii][jj]
-        if i < self._width-1:
-            ii = i+1
-            jj = j
-            if not doCheck or self._pixnew[ii][jj]:
-                dist = self.colorDistance(self._pixref[ii,jj], refcolor)
-                if dist < minDist:
-                    minDist = dist
-                    self._pixnew[i][j] = self._pixnew[ii][jj]
-        if j < self._height-1:
-            ii = i
-            jj = j+1
-            if not doCheck or self._pixnew[ii][jj]:
-                dist = self.colorDistance(self._pixref[ii,jj], refcolor)
-                if dist < minDist:
-                    minDist = dist
-                    self._pixnew[i][j] = self._pixnew[ii][jj]
+        for paletteColor in self._palette:
+            dist = self.colorDistance(refcolor, paletteColor)
+            if dist < minDist:
+                minDist = dist
+                self._pixnew[i][j] = paletteColor
 
-            if self._pixnew[i][j]:
-                numPixelColor += 1
-
-        return numPixelColor
+        return 1
 
 
-        
     def computePalette(self):
         numPixelColored = 0
         numColors = 0
@@ -323,24 +253,15 @@ class Zones:
         
         while pctCovered < self._pctCoverage and numColors < self._numColorMax:
             (mostFrequentColor,mostFrequentColorSat) = self.getMostFrequentColorSat()
-            print("computing pixels with color:",mostFrequentColor)
+            self._palette.append(mostFrequentColor)
+            print("computing pixels with color:",mostFrequentColorSat)
             numPixelColored += self.computePixels(mostFrequentColor,mostFrequentColorSat)
             self.clearStats(mostFrequentColor)
             pctCovered = numPixelColored * 100.0 / totalPixel
             numColors += 1
 
-        numNewPixels = 1
-        checkIfColorSet = False
-        while numPixelColored < totalPixel and not checkIfColorSet:
-            checkIfColorSet = (numNewPixels == 0)
-            numNewPixels = self.computeRemainingPixels(checkIfColorSet)
-            if checkIfColorSet:
-                print("last pass...")
-            else:
-                print("computing remaining pixels...")
-            numPixelColored += numNewPixels
-        if numPixelColored < totalPixel:
-            print("Could not assign a color to all pixels")
+        print("computing remaining pixels...")
+        self.computeRemainingPixels()
 
         self.paintPixels()
 

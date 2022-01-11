@@ -1,10 +1,10 @@
 
 import sys
 
-# Copied from brightcolors
-# In addition, take into account contour detection, and aim for saturated colors.
+# Copied from saturation
+# In addition, take into account contour detection
 
-class Saturation:
+class Zones:
     def __init__(self, picref):
         self._width = picref.size[0]
         self._height = picref.size[1]
@@ -12,7 +12,9 @@ class Saturation:
         self._pixref = picref.load()
         self._picnew = picref
         self._stats = {}
-        self._pixnew = [[None for j in range(self._height)] for i in range(self._width)]
+        self._greyscale = [[0 for j in range(self._height)] for i in range(self._width)]
+        self._contour   = [[0 for j in range(self._height)] for i in range(self._width)]
+        self._pixnew    = [[None for j in range(self._height)] for i in range(self._width)]
 
         # Parameters - Undocumented
         self._colorThreshold = 30
@@ -71,6 +73,27 @@ class Saturation:
                     self._stats[color] += 1
                 else:
                     self._stats[color] = 1
+
+
+    def computeGreyscale(self):
+        for i in range(self._width):
+            for j in range(self._height):
+                (r,g,b) = self._pixref[i,j]
+                grey = int((r+g+b)/3)
+                self._greyscale[i][j] = grey
+
+
+    def computeContours(self):
+        self.computeGreyscale()
+        for i in range(self._width):
+            for j in range(self._height):
+                if i > 0 and j > 0 and i < self._width-1 and j < self._height-1:
+                    c1 = 0 -self._greyscale[i-1][j-1] -2*self._greyscale[i-1][j] -self._greyscale[i-1][j+1];
+                    c2 =    self._greyscale[i+1][j-1] +2*self._greyscale[i+1][j] +self._greyscale[i+1][j+1];
+                    c3 = 0 -self._greyscale[i-1][j-1] -2*self._greyscale[i][j-1] -self._greyscale[i+1][j-1];
+                    c4 =    self._greyscale[i-1][j+1] +2*self._greyscale[i][j+1] +self._greyscale[i+1][j+1];
+                    self._contour[i][j] = abs((c1 + c2 + c3 + c4) / 16)
+
 
 
     def getMostFrequentColorSat(self):
@@ -197,7 +220,7 @@ class Saturation:
                     (r,g,b) = self._pixnew[i][j]
                 else:
                     (r,g,b) = (0,0,0)
-                    print("warning: missing pixel in",i,",",j)
+                    #print("warning: missing pixel in",i,",",j)
                 pixnewij = (r, g, b)
                 self._picnew.putpixel((i,j),pixnewij)
 
@@ -214,44 +237,71 @@ class Saturation:
         numPixelColor = 0
         for i in range(self._width):
             for j in range(self._height):
-                refcolor = self._pixref[i,j]
-                if not self._pixnew[i][j]:
-                    minDist = 1000
-                    if i > 0:
-                        ii = i-1
-                        jj = j
-                        dist = self.colorDistance(self._pixref[ii,jj], refcolor)
-                        if dist < minDist:
-                            minDist = dist
-                            if not checkIsSet or self._pixnew[ii][jj]:
-                                self._pixnew[i][j] = self._pixnew[ii][jj]
-                    if j > 0:
-                        ii = i
-                        jj = j-1
-                        dist = self.colorDistance(self._pixref[ii,jj], refcolor)
-                        if dist < minDist:
-                            minDist = dist
-                            if not checkIsSet or self._pixnew[ii][jj]:
-                                self._pixnew[i][j] = self._pixnew[ii][jj]
-                    if i < self._width-1:
-                        ii = i+1
-                        jj = j
-                        dist = self.colorDistance(self._pixref[ii,jj], refcolor)
-                        if dist < minDist:
-                            minDist = dist
-                            if not checkIsSet or self._pixnew[ii][jj]:
-                                self._pixnew[i][j] = self._pixnew[ii][jj]
-                    if j < self._height-1:
-                        ii = i
-                        jj = j+1
-                        dist = self.colorDistance(self._pixref[ii,jj], refcolor)
-                        if dist < minDist:
-                            minDist = dist
-                            if not checkIsSet or self._pixnew[ii][jj]:
-                                self._pixnew[i][j] = self._pixnew[ii][jj]
+                numPixelColor += self.computePixel(checkIsSet, i, j)
+        '''
+        # This is to avoid bleeding...
+        for i in reversed(range(self._width)):
+            for j in range(self._height):
+                numPixelColor += self.computePixel(checkIsSet, i, j)
+        for i in range(self._width):
+            for j in reversed(range(self._height)):
+                numPixelColor += self.computePixel(checkIsSet, i, j)
+        for i in reversed(range(self._width)):
+            for j in reversed(range(self._height)):
+                numPixelColor += self.computePixel(checkIsSet, i, j)
+        '''
 
-                    if self._pixnew[i][j]:
-                        numPixelColor += 1
+        return numPixelColor
+
+
+    def computePixel(self, checkIsSet, i, j):
+        if self._pixnew[i][j]:
+            return 0
+
+        numPixelColor = 0
+        minDist = 1000
+
+        if self._contour[i][j] < 10:
+            doCheck = True
+        else:
+            doCheck = checkIsSet
+
+        refcolor = self._pixref[i,j]
+        if i > 0:
+            ii = i-1
+            jj = j
+            if not doCheck or self._pixnew[ii][jj]:
+                dist = self.colorDistance(self._pixref[ii,jj], refcolor)
+                if dist < minDist:
+                    minDist = dist
+                    self._pixnew[i][j] = self._pixnew[ii][jj]
+        if j > 0:
+            ii = i
+            jj = j-1
+            if not doCheck or self._pixnew[ii][jj]:
+                dist = self.colorDistance(self._pixref[ii,jj], refcolor)
+                if dist < minDist:
+                    minDist = dist
+                    self._pixnew[i][j] = self._pixnew[ii][jj]
+        if i < self._width-1:
+            ii = i+1
+            jj = j
+            if not doCheck or self._pixnew[ii][jj]:
+                dist = self.colorDistance(self._pixref[ii,jj], refcolor)
+                if dist < minDist:
+                    minDist = dist
+                    self._pixnew[i][j] = self._pixnew[ii][jj]
+        if j < self._height-1:
+            ii = i
+            jj = j+1
+            if not doCheck or self._pixnew[ii][jj]:
+                dist = self.colorDistance(self._pixref[ii,jj], refcolor)
+                if dist < minDist:
+                    minDist = dist
+                    self._pixnew[i][j] = self._pixnew[ii][jj]
+
+            if self._pixnew[i][j]:
+                numPixelColor += 1
 
         return numPixelColor
 
@@ -269,6 +319,7 @@ class Saturation:
         print("    percentage of coverage before computing remaining pixels:",self._pctCoverage)
 
         self.computeStats()
+        self.computeContours()
         
         while pctCovered < self._pctCoverage and numColors < self._numColorMax:
             (mostFrequentColor,mostFrequentColorSat) = self.getMostFrequentColorSat()
@@ -279,7 +330,8 @@ class Saturation:
             numColors += 1
 
         numNewPixels = 1
-        while numPixelColored < totalPixel:
+        checkIfColorSet = False
+        while numPixelColored < totalPixel and not checkIfColorSet:
             checkIfColorSet = (numNewPixels == 0)
             numNewPixels = self.computeRemainingPixels(checkIfColorSet)
             if checkIfColorSet:
@@ -287,15 +339,17 @@ class Saturation:
             else:
                 print("computing remaining pixels...")
             numPixelColored += numNewPixels
+        if numPixelColored < totalPixel:
+            print("Could not assign a color to all pixels")
 
         self.paintPixels()
 
         return self._picnew
 
 
-### Saturation on whole image given by picref. ###
+### Apply on whole image given by picref. ###
 def apply(picref):
-    sat = Saturation(picref)
-    return sat.computePalette()
+    image = Zones(picref)
+    return image.computePalette()
     
 

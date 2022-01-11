@@ -2,7 +2,7 @@
 import sys
 
 # Copied from brightcolors
-# In addition, take into account contour detection, and aim for saturated colors.
+# Aim for saturated colors.
 
 class Saturation:
     def __init__(self, picref):
@@ -150,8 +150,6 @@ class Saturation:
         mostFrequentColorSat = (r,g,b)
         if not self.isNeighbouringColor(mostFrequentColor,mostFrequentColorSat):
             print("Error:",mostFrequentColor,"and",mostFrequentColorSat,"are not neighbouring colors")
-        print("Debug: mostFrequentColor    =",mostFrequentColor," hue =",self.computeHue(mostFrequentColor))
-        print("Debug: mostFrequentColorSat =",mostFrequentColorSat," hue =",self.computeHue(mostFrequentColorSat))
 
 
         '''

@@ -7,9 +7,10 @@ import blur
 import palette8
 import brightcolors
 import saturation
+import zones
 
 if len(sys.argv) < 3:
-	print("Syntax: " + sys.argv[0] + " filename [blur|palette8|brightcolors|saturation]")
+	print("Syntax: " + sys.argv[0] + " filename [blur|palette8|brightcolors|saturation|zones]")
 	exit(0)
 	
 ## File to be read. ##
@@ -35,6 +36,8 @@ def applyFilter(filtername, picref):
 		return brightcolors.apply(picref)
 	elif "saturation" == filtername:
 		return saturation.apply(picref)
+	elif "zones" == filtername:
+		return zones.apply(picref)
 	else:
 		return "Invalid filter name"
 	

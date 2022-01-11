@@ -10,9 +10,9 @@ import saturation
 import zones
 
 if len(sys.argv) < 3:
-	print("Syntax: " + sys.argv[0] + " filename [blur|palette8|brightcolors|saturation|zones]")
-	exit(0)
-	
+    print("Syntax: " + sys.argv[0] + " filename [blur|palette8|brightcolors|saturation|zones]")
+    exit(0)
+    
 ## File to be read. ##
 filename = sys.argv[1]
 
@@ -28,20 +28,20 @@ picref = Image.open(fullfilename);
 
 
 def applyFilter(filtername, picref):
-	if "blur" == filtername:
-		return blur.blur(picref)
-	elif "palette8" == filtername:
-		return palette8.palette8(picref)
-	elif "brightcolors" == filtername:
-		return brightcolors.apply(picref)
-	elif "saturation" == filtername:
-		return saturation.apply(picref)
-	elif "zones" == filtername:
-		return zones.apply(picref)
-	else:
-		return "Invalid filter name"
-	
-	
+    if "blur" == filtername:
+        return blur.blur(picref)
+    elif "palette8" == filtername:
+        return palette8.palette8(picref)
+    elif "brightcolors" == filtername:
+        return brightcolors.apply(picref)
+    elif "saturation" == filtername:
+        return saturation.apply(picref)
+    elif "zones" == filtername:
+        return zones.apply(picref)
+    else:
+        return "Invalid filter name"
+    
+    
 picnew = applyFilter(filtername, picref)
 
 picnew.show()

@@ -5,8 +5,6 @@ from PIL import Image
 cwd = os.getcwd()
 import blur
 import palette8
-import brightcolors
-import saturation
 import zones
 
 if len(sys.argv) < 3:
@@ -50,16 +48,20 @@ def applyFilter(filtername, picref):
     else:
         picref = applyBlur(picref)
 
+    kickGreys = False
+    usePicColors = False
     if "blur" == filtername:
         return picref
     elif "palette8" == filtername:
         return palette8.palette8(picref)
     elif "brightcolors" == filtername:
-        return brightcolors.apply(picref)
+        usePicColors = True
+        return zones.apply(picref, kickGreys, usePicColors)
     elif "saturation" == filtername:
-        return saturation.apply(picref)
+        return zones.apply(picref, kickGreys, usePicColors)
     elif "zones" == filtername:
-        return zones.apply(picref)
+        kickGreys = True
+        return zones.apply(picref, kickGreys, usePicColors)
     else:
         print("Invalid filter name:",filtername)
         return None

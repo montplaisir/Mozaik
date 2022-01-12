@@ -3,8 +3,13 @@ def computeSaturation(color):
     maxrgb = max(color[0], color[1], color[2]);
     minrgb = min(color[0], color[1], color[2]);
     if minrgb == maxrgb:
-        return 0;
-    return (maxrgb-minrgb) / (1 - abs((maxrgb-minrgb)/255-1))
+        return 0
+    luminosity = computeGreyscale(color) / 255
+    denom = 1 - abs(2*luminosity - 1)
+    if denom == 0:
+        return 0
+
+    return (maxrgb-minrgb) / denom
 
 
 def computeHue(color):

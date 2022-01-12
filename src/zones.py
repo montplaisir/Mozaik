@@ -62,19 +62,42 @@ class Zones:
                     self._contour[i][j] = abs((c1 + c2 + c3 + c4) / 16)
 
 
-    def getMostFrequentColorSat(self):
+    def getMostFrequentColorSat(self, kickGreys, usePicColors):
         allcolors = self._stats.keys()
         frequency = 0
         for color in allcolors:
             if self._stats[color] > frequency:
                 mostFrequentColor = color
                 frequency = self._stats[color]
+        if usePicColors:
+            mostFrequentColorSat = self.getMostSaturatedColorAround(mostFrequentColor)
+        else:
+            mostFrequentColorSat = self.saturateColor(mostFrequentColor, kickGreys)
 
+        return (mostFrequentColor,mostFrequentColorSat)
+
+
+    def getMostSaturatedColorAround(self, mostFrequentColor):
+        mostFrequentColorSat = mostFrequentColor 
+        currentSat = hsl.computeSaturation(mostFrequentColorSat)
+        allcolors = self._stats.keys()
+        
+        for color in allcolors:
+            if ut.isNeighbouringColor(mostFrequentColor, color, self._colorThreshold):
+                colorSat = hsl.computeSaturation(color)
+                if colorSat > currentSat:
+                    mostFrequentColorSat = color
+                    currentSat = colorSat
+
+        return mostFrequentColorSat
+                    
+
+    def saturateColor(self, color, kickGreys):
         # Saturate the given color within threshold limits, without regards to the available colors
         # This is done by adding the threshold to the max rgb, and substracting it from the min rgb,
         # within limits.
         # To ensure the hue remains the same, we also augment the middle value.
-        (r,g,b) = mostFrequentColor
+        (r,g,b) = color
         maxrgb = max(r, g, b);
         minrgb = min(r, g, b);
         if (r == minrgb and g == maxrgb) or (g == minrgb and r == maxrgb):
@@ -84,7 +107,7 @@ class Zones:
         elif (g == minrgb and b == maxrgb) or (b == minrgb and g == maxrgb):
             midrgb = r
         else:
-            print("Error: Could not compute midrgb for color",mostFrequentColor)
+            print("Error: Could not compute midrgb for color",color)
 
         # Compute amount that we can use for saturation adjustment
         amount = self._colorThreshold
@@ -96,34 +119,7 @@ class Zones:
             midamount = int((2*midrgb-minrgb-maxrgb)*amount / (maxrgb-minrgb))
 
         if maxrgb - minrgb <= 10: #Grey - greyish
-            # Choose color arbitrarly, we do not want grey
-            # Make pale greys whiter, dark greys blacker; Medium grey get a color chosen arbitrarly.
-            if minrgb <= 2*self._colorThreshold:
-                amount = min(int(minrgb/2),self._colorThreshold)
-                r -= amount
-                g -= amount
-                b -= amount
-            elif maxrgb + 2*self._colorThreshold >= 255:
-                amount = min(int((255-maxrgb)/2),self._colorThreshold)
-                r += amount
-                g += amount
-                b += amount
-            else:
-                amount = self._colorThreshold
-                halfamount = int(amount/2)  #ensures to keep same luminosity
-                randrgb = random.randrange(3)
-                if randrgb == 0:
-                    r += amount
-                    g -= halfamount
-                    b -= halfamount
-                elif randrgb == 1:
-                    r -= halfamount
-                    g += amount
-                    b -= halfamount
-                elif randrgb == 2:
-                    r -= halfamount
-                    g -= halfamount
-                    b += amount
+            (r,g,b) = self.computeKickedGrey(minrgb, maxrgb, color, kickGreys)
         elif r == minrgb and g == maxrgb:
             r -= amount
             g += amount
@@ -149,12 +145,44 @@ class Zones:
             g += amount
             r += midamount
 
-        mostFrequentColorSat = (r,g,b)
-        if not ut.isNeighbouringColor(mostFrequentColor,mostFrequentColorSat, self._colorThreshold):
-            print("Error:",mostFrequentColor,"and",mostFrequentColorSat,"are not neighbouring colors")
+        colorSat = (r,g,b)
+        if not ut.isNeighbouringColor(color,colorSat, self._colorThreshold):
+            print("Error:",color,"and",colorSat,"are not neighbouring colors")
+
+        return colorSat
 
 
-        return (mostFrequentColor,mostFrequentColorSat)
+    def computeKickedGrey(self, minrgb, maxrgb, color, kickGreys):
+        (r,g,b) = color
+        # Make pale greys whiter, dark greys blacker
+        # When kicking greys, Medium grey get a color chosen arbitrarly. Otherwise they remain grey.
+        if minrgb <= 2*self._colorThreshold:
+            amount = min(int(minrgb/2),self._colorThreshold)
+            r -= amount
+            g -= amount
+            b -= amount
+        elif maxrgb + 2*self._colorThreshold >= 255:
+            amount = min(int((255-maxrgb)/2),self._colorThreshold)
+            r += amount
+            g += amount
+            b += amount
+        elif kickGreys:
+            amount = self._colorThreshold
+            halfamount = int(amount/2)  #ensures to keep same luminosity
+            randrgb = random.randrange(3)
+            if randrgb == 0:
+                r += amount
+                g -= halfamount
+                b -= halfamount
+            elif randrgb == 1:
+                r -= halfamount
+                g += amount
+                b -= halfamount
+            elif randrgb == 2:
+                r -= halfamount
+                g -= halfamount
+                b += amount
+        return (r,g,b)
 
 
     def computePixels(self, mostFrequentColor, mostFrequentColorSat):
@@ -219,7 +247,7 @@ class Zones:
         return 1
 
 
-    def computePalette(self):
+    def computePalette(self, kickGreys, usePicColors):
         numPixelColored = 0
         numColors = 0
         totalPixel = self._width * self._height
@@ -232,10 +260,9 @@ class Zones:
 
         print("computing color stats...")
         self.computeStats()
-        #self.computeContours()
         
         while pctCovered < self._pctCoverage and numColors < self._numColorMax:
-            (mostFrequentColor,mostFrequentColorSat) = self.getMostFrequentColorSat()
+            (mostFrequentColor,mostFrequentColorSat) = self.getMostFrequentColorSat(kickGreys, usePicColors)
             self._palette.append(mostFrequentColor)
             print("computing pixels with color:",mostFrequentColorSat)
             numPixelColored += self.computePixels(mostFrequentColor,mostFrequentColorSat)
@@ -254,8 +281,8 @@ class Zones:
 
 
 ### Apply on whole image given by picref. ###
-def apply(picref):
+def apply(picref, kickGreys, usePicColors):
     image = Zones(picref)
-    return image.computePalette()
+    return image.computePalette(kickGreys, usePicColors)
     
 
